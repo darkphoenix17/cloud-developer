@@ -69,7 +69,7 @@ import { Car, cars as cars_list } from './cars';
   } );
   
 
-  // @TODO Add an endpoint to get a list of cars
+  // Add an endpoint to get a list of cars #Solved
   // it should be filterable by make with a query paramater
   app.get( "/cars/", ( req: Request, res: Response ) => {
       // destruct our query paramaters
@@ -87,7 +87,7 @@ import { Car, cars as cars_list } from './cars';
       res.status(200).send(cars_list);
   } );
 
-  // @TODO Add an endpoint to get a specific car
+  // Add an endpoint to get a specific car #Solved
   // it should require id
   // it should fail gracefully if no matching car is found
   app.get( "/cars/:id", ( req: Request, res: Response ) => {
@@ -112,7 +112,7 @@ import { Car, cars as cars_list } from './cars';
     res.status(200).send(car);
   } );
   
-  /// @TODO Add an endpoint to post a new car to our list
+  /// Add an endpoint to post a new car to our list #Solved
   // it should require id, type, model, and cost
   app.post( "/cars/", ( req: Request, res: Response ) => {
 
