@@ -12,9 +12,9 @@ You'll need to create a new node server. Open a new terminal within the project 
 
 ### Elasticbean stalk url
 
-[Image Microservices endpoint] (http://udacity-c2-image-filter-dev.ap-south-1.elasticbeanstalk.com/)
+[Image Microservices endpoint](http://udacity-c2-image-filter-dev.ap-south-1.elasticbeanstalk.com/)
 
-[Test it with the url in the rubric] (http://udacity-c2-image-filter-dev.ap-south-1.elasticbeanstalk.com/filteredimage?image_url=https://upload.wikimedia.org/wikipedia/commons/b/bd/Golden_tabby_and_white_kitten_n01.jpg)
+[Test it with the url in the rubric](http://udacity-c2-image-filter-dev.ap-south-1.elasticbeanstalk.com/filteredimage?image_url=https://upload.wikimedia.org/wikipedia/commons/b/bd/Golden_tabby_and_white_kitten_n01.jpg)
 
 
  ### Changes made:
