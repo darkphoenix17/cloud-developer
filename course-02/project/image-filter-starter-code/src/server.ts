@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import bodyParser from 'body-parser';
 import { filterImageFromURL, deleteLocalFiles } from './util/util';
-import {isUri} from 'valid-url';//fir verifying the url structure
+import {isUri} from 'valid-url'; //for verifying the url structure
 
 (async () => {
 
