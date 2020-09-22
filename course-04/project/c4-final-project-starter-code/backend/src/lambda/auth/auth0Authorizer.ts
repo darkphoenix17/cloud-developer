@@ -4,15 +4,16 @@ import 'source-map-support/register'
 import { verify, decode } from 'jsonwebtoken'
 import { createLogger } from '../../utils/logger'
 import Axios from 'axios'
+import { getToken } from '../../auth/utils'
 import { Jwt } from '../../auth/Jwt'
 import { JwtPayload } from '../../auth/JwtPayload'
 
 const logger = createLogger('auth')
 
-// TODO: Provide a URL that can be used to download a certificate that can be used
+// TODO: Provide a URL that can be used to download a certificate that can be used  --DONE
 // to verify JWT token signature.
 // To get this URL you need to go to an Auth0 page -> Show Advanced Settings -> Endpoints -> JSON Web Key Set
-const jwksUrl = '...'
+const jwksUrl = 'https://dev-h5wc26ep.us.auth0.com/.well-known/jwks.json'
 
 export const handler = async (
   event: CustomAuthorizerEvent
@@ -58,20 +59,22 @@ async function verifyToken(authHeader: string): Promise<JwtPayload> {
   const token = getToken(authHeader)
   const jwt: Jwt = decode(token, { complete: true }) as Jwt
 
-  // TODO: Implement token verification
+  // TODO: Implement token verification  --DONE
   // You should implement it similarly to how it was implemented for the exercise for the lesson 5
   // You can read more about how to do this here: https://auth0.com/blog/navigating-rs256-and-jwks/
-  return undefined
-}
+  if(!jwt){
+    throw new Error('invalid token')
+  }
+  try {
+    const response = await Axios.get(jwksUrl);
+    const certID = response.data.keys[0].x5c[0]
+    const cert =
+    '-----BEGIN CERTIFICATE-----\n' + certID + '\n-----END CERTIFICATE-----'
 
-function getToken(authHeader: string): string {
-  if (!authHeader) throw new Error('No authentication header')
+    return verify(token, cert, { algorithms: ['RS256']}) as JwtPayload;
 
-  if (!authHeader.toLowerCase().startsWith('bearer '))
-    throw new Error('Invalid authentication header')
-
-  const split = authHeader.split(' ')
-  const token = split[1]
-
-  return token
+  } catch (err) {
+    throw new Error('Something went wrong with token');
+  }
+  //return undefined
 }
