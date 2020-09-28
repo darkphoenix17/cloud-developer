@@ -28,7 +28,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
   const images = await getImagesPerGroup(groupId)
 
   return {
-    statusCode: 201,
+    statusCode: 200,
     headers: {
       'Access-Control-Allow-Origin': '*'
     },
@@ -59,7 +59,7 @@ async function getImagesPerGroup(groupId: string) {
     ExpressionAttributeValues: {
       ':groupId': groupId
     },
-    ScanIndexForward: false
+    ScanIndexForward: false    //it will return the latest images first by reversing the sort order.
   }).promise()
 
   return result.Items

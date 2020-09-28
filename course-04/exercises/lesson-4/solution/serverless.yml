@@ -8,10 +8,10 @@ plugins:
 
 provider:
   name: aws
-  runtime: nodejs8.10
+  runtime: nodejs12.x
 
   stage: ${opt:stage, 'dev'}
-  region: ${opt:region, 'us-east-1'}
+  region: ${opt:region, 'ap-south-1'}
 
   environment:
     GROUPS_TABLE: Groups-${self:provider.stage}
@@ -158,14 +158,14 @@ functions:
       - websocket:
           route: $disconnect
 
-  # SyncWithElasticsearch:
-  #   environment:
-  #     ES_ENDPOINT: !GetAtt ImagesSearch.DomainEndpoint
-  #   handler: src/lambda/dynamoDb/elasticSearchSync.handler
-  #   events:
-  #     - stream:
-  #         type: dynamodb
-  #         arn: !GetAtt ImagesDynamoDBTable.StreamArn
+  SyncWithElasticsearch:
+    environment:
+      ES_ENDPOINT: !GetAtt ImagesSearch.DomainEndpoint
+    handler: src/lambda/dynamoDb/elasticSearchSync.handler
+    events:
+      - stream:
+          type: dynamodb
+          arn: !GetAtt ImagesDynamoDBTable.StreamArn
 
 resources:
   Resources:
@@ -298,28 +298,28 @@ resources:
         DisplayName: Image bucket topic
         TopicName: ${self:custom.topicName}
 
-    # ImagesSearch:
-    #   Type: AWS::Elasticsearch::Domain
-    #   Properties:
-    #     ElasticsearchVersion: '6.3'
-    #     DomainName: images-search-${self:provider.stage}
-    #     ElasticsearchClusterConfig:
-    #       DedicatedMasterEnabled: false
-    #       InstanceCount: '1'
-    #       ZoneAwarenessEnabled: false
-    #       InstanceType: t2.small.elasticsearch
-    #     EBSOptions:
-    #       EBSEnabled: true
-    #       Iops: 0
-    #       VolumeSize: 10
-    #       VolumeType: 'gp2'
+    ImagesSearch:
+      Type: AWS::Elasticsearch::Domain
+      Properties:
+        ElasticsearchVersion: '6.3'
+        DomainName: images-search-${self:provider.stage}
+        ElasticsearchClusterConfig:
+          DedicatedMasterEnabled: false
+          InstanceCount: '1'
+          ZoneAwarenessEnabled: false
+          InstanceType: t2.small.elasticsearch
+        EBSOptions:
+          EBSEnabled: true
+          Iops: 0
+          VolumeSize: 10
+          VolumeType: 'gp2'
 
-    #     AccessPolicies:
-    #       Version: '2012-10-17'
-    #       Statement:
-    #         -
-    #           Effect: Allow
-    #           Principal:
-    #             AWS: '*'
-    #           Action: 'es:*'
-    #           Resource: '*'
+        AccessPolicies:
+          Version: '2012-10-17'
+          Statement:
+            -
+              Effect: Allow
+              Principal:
+                AWS: '*'
+              Action: 'es:*'
+              Resource: '*'

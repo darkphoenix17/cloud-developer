@@ -1,33 +1,45 @@
 import 'source-map-support/register'
-
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
 import * as middy from 'middy'
-import { cors } from 'middy/middlewares'
+//import { cors } from 'middy/middlewares'
+import { createLogger } from '../../utils/logger';
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
+import { createTodo } from "../../businessLogic/todo";
+import { getToken } from '../../auth/utils';
 import { CreateTodoRequest } from '../../requests/CreateTodoRequest'
-import { createTodo } from '../../businessLogic/todo'
-import { createLogger } from '../../utils/logger'
 
-const logger = createLogger('update-todo')
+// Using Winston for logging
+const logger = createLogger('createTodo');
 
-export const handler = middy(
-  async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+export const handler = middy(async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+  try {
     const newTodo: CreateTodoRequest = JSON.parse(event.body)
-    const authorization = event.headers.Authorization
-    const split = authorization.split(' ')
-    const jwtToken = split[1]
-    const newItem = await createTodo(newTodo, jwtToken)
-    // TODO: Implement creating a new TODO item  --DONE
 
-    logger.info(`New Item ${newItem}`)
+    //  TODO: Implement creating a new TODO item
+    const jwtToken = getToken(event.headers.Authorization)
+    const newItem = await createTodo(newTodo, jwtToken)
+
+    // Logging userId and newTodo
+    logger.info(`create Todo with data ${newTodo}`);
 
     return {
       statusCode: 201,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true
+      },
       body: JSON.stringify({
-        item: newItem,
+        newItem
       })
     }
-  });
+  } catch (e) {
+    logger.error('Error: ' + e.message)
 
-handler.use(
-  cors({ credentials: true })
-)
+    return {
+      statusCode: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: e.message
+    }
+  }
+})

@@ -1,28 +1,43 @@
 import 'source-map-support/register'
+import * as middy from 'middy'
+//import { cors } from 'middy/middlewares'
+import { getToken } from '../../auth/utils';
+import { createLogger } from '../../utils/logger';
+import { getAllTodos } from "../../businessLogic/todo";
 
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
-import * as middy from 'middy'
-import { getAllTodos } from '../../businessLogic/todo'
-import { getToken } from '../../auth/utils'
-import { createLogger } from '../../utils/logger'
-import { cors } from 'middy/middlewares'
 
-const logger = createLogger('get-todos')
+// Using Winson logger
+const logger = createLogger('getTodos');
 
 export const handler = middy(
   async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     console.log('Processing event:', event)
-    const jwtToken: string = getToken(event.headers.Authorization)
-    const todos = await getAllTodos(jwtToken)
-    logger.info('Get all todo from list');
-    // TODO: Get all TODO items for a current user --DONE
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        items: todos
-      })
+
+    try {
+      const jwtToken: string = getToken(event.headers.Authorization)
+      const todo = await getAllTodos(jwtToken)
+
+      return {
+        statusCode: 200,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Credentials': true
+        },
+        body: JSON.stringify({
+          items: todo
+        })
+      }
+    } catch (e) {
+      logger.error('Error: ' + e.message)
+
+      return {
+        statusCode: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*'
+        },
+        body: e.message
+      }
     }
-  });
-  handler.use(
-    cors({ credentials: true})
+  }
 )

@@ -1,30 +1,43 @@
 import 'source-map-support/register'
-
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
 import * as middy from 'middy'
+//import { cors } from 'middy/middlewares'
+import { getToken } from '../../auth/utils';
+import { createLogger } from '../../utils/logger';
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
+import { updateTodo } from "../../businessLogic/todo";
 import { UpdateTodoRequest } from '../../requests/UpdateTodoRequest'
-import { updateTodo } from '../../businessLogic/todo'
-import { getToken } from '../../auth/utils'
-import { createLogger } from '../../utils/logger'
-import { cors } from 'middy/middlewares'
 
-const logger = createLogger('update-todo')
+// Using Winston
+const logger = createLogger('updateTodo');
 
 export const handler = middy(
   async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+    logger.info(`updating todo main-page is running`)
+    //logging updating todo main-page
+    try {
+      const todoId: string = event.pathParameters.todoId
+      const updatedTodo: UpdateTodoRequest = JSON.parse(event.body)
+      const jwtToken: string = getToken(event.headers.Authorization)
+      await updateTodo(todoId, updatedTodo, jwtToken)
 
-    // TODO: Update a TODO item with the provided id using values in the "updatedTodo" object --DONE
-    const todoId: string = event.pathParameters.todoId
-    const updatedTodo: UpdateTodoRequest = JSON.parse(event.body)
-    const jwtToken: string = getToken(event.headers.Authorization)
-    logger.info('Update Todo Item');
-    await updateTodo(todoId, updatedTodo, jwtToken)
-    return {
-      statusCode: 200,
-      body: 'Succesfully updated'
+      return {
+        statusCode: 200,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Credentials': true
+        },
+        body: 'Updated Succesfully'
+      }
+    } catch (e) {
+      logger.error('Error', { error: e.message })
+
+      return {
+        statusCode: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*'
+        },
+        body: e.message
+      }
     }
   }
-)
-handler.use(
-  cors({ credentials: true })
 )

@@ -4,8 +4,17 @@ service:
 plugins:
   - serverless-webpack
   - serverless-reqvalidator-plugin
-  - serverless-aws-documentation
   - serverless-iam-roles-per-function
+  - serverless-aws-documentation
+  # - serverless-dynamodb-local
+  # - serverless-offline
+
+  
+
+# Read: https://github.com/dherault/serverless-offline
+# custom:
+#   serverless-offline:
+#     port: 3003
 
 package:
   individually: true
@@ -23,23 +32,34 @@ provider:
     TODOS_S3_BUCKET: serverless-todos-rkndgt-attachments-${self:provider.stage}
     SIGNED_URL_EXPIRATION: 1000
   
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - codedeploy:*
+      Resource:
+        - '*'  
+
   tracing:
     lambda: true
     apiGateway: true
+  
+  logs:
+    # Enable API Gateway logs
+    restApi: true
   
 custom: 
   documentation: 
     api: 
       info: 
         version: v1.0.0
-        title: Todos API
+        title: Todos API by Karan
         description: Serverless exercise for todos list
     # JSON Schema to validate HTTP request using serverless-reqvalidator-plugin
     models: 
-      - name: CreateRequest
+      - name: CreateTodoRequest
         contentType: application/json
         schema: ${file(src/models/create-todo-request.json)}
-      - name: UpdateRequest
+      - name: UpdateTodoRequest
         contentType: application/json
         schema: ${file(src/models/update-todo-request.json)}
 
@@ -63,18 +83,21 @@ functions:
           path: todos
           authorizer: Auth
           cors: true
-          reqValidatorName: RequestBodyValidator
     iamRoleStatements:
       - Effect: Allow
         Action:
+          - dynamodb:Scan
           - dynamodb:Query
-        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}/index/${self:provider.environment.TODOS_TABLE_IDX}
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}/index/${self:provider.environment.TODOS_TABLE_IDX}  
       - Effect: Allow
         Action:
           - xray:PutTraceSegments
           - xray:PutTelemetryRecords
-        Resource:
-          - '*'      
+        Resource: "*"
 
   # TODO: Configure this function --DONE
   CreateTodo:
@@ -87,59 +110,58 @@ functions:
           path: todos
           reqValidatorName: RequestBodyValidator
           documentation:
-            summary: Create a new todo
-            description: Create a new todo
+            summary: Create a new Todo Items
+            description: Create a new Todo Items
+            requestModels:
+              'application/json': CreateTodoRequest
     iamRoleStatements:
       - Effect: Allow
         Action:
           - dynamodb:PutItem
-        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}       
       - Effect: Allow
         Action:
           - xray:PutTraceSegments
           - xray:PutTelemetryRecords
-        Resource:
-          - '*'          
+        Resource: "*" 
 
   # TODO: Configure this function  --DONE
   UpdateTodo:
     handler: src/lambda/http/updateTodo.handler
     events:
       - http:
-          authorizer: Auth
+          authorizer: Auth  #check
           cors: true
           method: patch
           path: todos/{todoId}
           reqValidatorName: RequestBodyValidator
-          documentation: 
-            summary: Update a new todo
-            description: Update a new todo
-            requestModels: 
+          documentation:
+            summary: Update a todo Item
+            description: Update a todo Item
+            requestModels:
+              'application/json': UpdateTodoRequest
     iamRoleStatements:
       - Effect: Allow
         Action:
           - dynamodb:UpdateItem
+          - dynamodb:PutItem
         Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
       - Effect: Allow
         Action:
           - xray:PutTraceSegments
           - xray:PutTelemetryRecords
-        Resource:
-          - '*'
+        Resource: "*"
 
   # TODO: Configure this function --DONE
   DeleteTodo:
     handler: src/lambda/http/deleteTodo.handler
     events:
       - http:
-          authorizer: Auth
+#         authorizer: Auth
           cors: true
           method: delete
-          path: todos/{todoId}
-          reqValidatorName: RequestBodyValidator
-          documentation: 
-            summary: Delete an item
-            description: Delete an item
+          path: todos/{todoId}  
     iamRoleStatements:
       - Effect: Allow
         Action:
@@ -149,8 +171,7 @@ functions:
         Action:
           - xray:PutTraceSegments
           - xray:PutTelemetryRecords
-        Resource:
-          - '*'
+        Resource: "*"
 
   # TODO: Configure this function  --DONE
   GenerateUploadUrl:
@@ -166,13 +187,12 @@ functions:
         Action:
           - s3:PutObject
           - s3:GetObject
-        Resource: arn:aws:s3:::${self:provider.environment.TODOS_S3_BUCKET}/*
+        Resource: arn:aws:s3:::${self:provider.environment.TODOS_S3_BUCKET}/*   
       - Effect: Allow
         Action:
           - xray:PutTraceSegments
           - xray:PutTelemetryRecords
-        Resource:
-          - '*'      
+        Resource: "*"
 
 resources:
   Resources: # TODO: Add any necessary AWS resources --DONE
@@ -187,6 +207,7 @@ resources:
         RestApiId:
           Ref: ApiGatewayRestApi
 
+    #1     
     RequestBodyValidator:
       Type: AWS::ApiGateway::RequestValidator
       Properties:
@@ -196,6 +217,7 @@ resources:
         ValidateRequestBody: true
         ValidateRequestParameters: false
 
+    #2
     TodosDynamoDBTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -204,25 +226,25 @@ resources:
             AttributeType: S
           - AttributeName: todoId   #sort key
             AttributeType: S
-          - AttributeName: createdAt #index key
+          - AttributeName: createdAt   #index key
             AttributeType: S
         KeySchema:
           - AttributeName: userId
             KeyType: HASH
           - AttributeName: todoId
             KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:provider.environment.TODOS_TABLE}
         LocalSecondaryIndexes:
           - IndexName: ${self:provider.environment.TODOS_TABLE_IDX}
             KeySchema:
               - AttributeName: userId
                 KeyType: HASH # partiton key
               - AttributeName: createdAt
-                KeyType: RANGE  #sort key
+                KeyType: RANGE  #index key
             Projection:
               ProjectionType: ALL
-        BillingMode: PAY_PER_REQUEST
-        TableName: ${self:provider.environment.TODOS_TABLE}
-
+    #3          
     AttachmentsBucket:
       Type: AWS::S3::Bucket
       Properties:
@@ -241,6 +263,7 @@ resources:
                 - HEAD
               MaxAge: 3000
 
+    #4
     BucketPolicy:
       Type: AWS::S3::BucketPolicy
       Properties:
@@ -251,7 +274,8 @@ resources:
             - Sid: PublicReadForGetBucketObjects
               Effect: Allow
               Principal: '*'
-              Action: 's3:GetObject'
+              Action: 
+                - s3:GetObject
+                - s3:PutObject
               Resource: arn:aws:s3:::${self:provider.environment.TODOS_S3_BUCKET}/*
-        Bucket:
-          Ref: AttachmentsBucket
+        Bucket: !Ref AttachmentsBucket

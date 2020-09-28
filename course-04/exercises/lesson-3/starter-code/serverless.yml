@@ -11,10 +11,10 @@ provider:
   runtime: nodejs8.10
 
   stage: ${opt:stage, 'dev'}
-  region: ${opt:region, 'us-east-1'}
+  region: ${opt:region, 'ap-south-1'}   #used to deploy in the default region if not provided in the execution command
 
   environment:
-    GROUPS_TABLE: Groups-${self:provider.stage}
+    GROUPS_TABLE: Groups-${self:provider.stage}   #our stage name would be used here along with `Groups-'abc...'` to name the table
     IMAGES_TABLE: Images-${self:provider.stage}
     IMAGE_ID_INDEX: ImageIdIndex
 

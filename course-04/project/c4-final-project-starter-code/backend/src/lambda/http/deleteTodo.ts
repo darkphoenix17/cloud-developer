@@ -1,31 +1,41 @@
 import 'source-map-support/register'
-
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
 import * as middy from 'middy'
-import { deleteTodo } from '../../businessLogic/todo'
-import { createLogger } from '../../utils/logger'
-import { cors } from 'middy/middlewares'
+import { getToken } from '../../auth/utils';
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
+import { createLogger } from '../../utils/logger';
+import { deleteTodo } from "../../businessLogic/todo";
 
-const logger = createLogger('delete-todo')
+// Using Winston Logger
+const logger = createLogger('delete-Todo');
 
-export const handler = middy(
-  async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-    const todoId = event.pathParameters.todoId
-    const authorization = event.headers.Authorization
-    const split = authorization.split(' ')
-    const jwtToken = split[1]
+export const handler = middy(async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+  // Getting todoID from path Parameters 
+  const todoId = event.pathParameters.todoId
 
-    // TODO: Remove a TODO item by id
-    await deleteTodo(jwtToken, todoId);
-
-    logger.info(`Successfully delete todo item ${todoId}`)
-
+  // TODO: Remove a TODO item by id
+  const authorization = event.headers.Authorization;
+  const jwtToken: string = getToken(authorization)
+  logger.info(`deleting todo ${todoId}`)
+  //logging delete todo
+  try {
+    await deleteTodo(todoId, jwtToken)
     return {
       statusCode: 200,
-      body: 'Sucessfully deleted!'
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true
+      },
+      body: 'Successfully Deleted'
     }
-  });
+  } catch (e) {
+    logger.error('Error: ' + e.message)
 
-handler.use(
-  cors({ credentials: true })
-)
+    return {
+      statusCode: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: e.message
+    }
+  }
+})
